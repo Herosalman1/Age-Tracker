@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8"> 
+  <title>Age Calculator</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      width: 100vw; /* Changed from 450px to 100vw for full screen web page view, but kept styling centered */
+      min-height: 100vh;
+      font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .container {
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 20px;
+      padding: 30px;
+      width: 90%;
+      max-width: 450px; /* Added max-width to keep the extension-like feel */
+      text-align: center;
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    }
+
+    h2 {
+      font-size: 28px;
+      margin-bottom: 25px;
+      background: linear-gradient(to right, #00dbde, #fc00ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: 1px;
+    }
+
+    input[type="date"] {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid #00dbde;
+      border-radius: 10px;
+      color: #fff;
+      font-size: 18px;
+      padding: 12px;
+      width: 100%;
+      outline: none;
+      margin-bottom: 20px;
+      color-scheme: dark; /* Helps date picker look good on dark backgrounds */
+    }
+
+    button {
+      background: linear-gradient(45deg, #00dbde, #fc00ff);
+      border: none;
+      border-radius: 10px;
+      color: white;
+      padding: 15px 30px;
+      font-size: 18px;
+      font-weight: bold;
+      cursor: pointer;
+      width: 100%;
+      transition: transform 0.2s, box-shadow 0.2s;
+      text-transform: uppercase;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(0, 219, 222, 0.4);
+    }
+
+    #result-container {
+      margin-top: 25px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .age-block {
+      font-size: 32px;
+      font-weight: 800;
+      color: #00dbde;
+      text-shadow: 0 0 10px rgba(0, 219, 222, 0.5);
+    }
+
+    .sub-text {
+      font-size: 14px;
+      color: #aaa;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>AGE TRACKER</h2>
+    <input type="date" id="dob">
+    <button id="calculateBtn">CALCULATE AGE</button>
+
+    <div id="result-container">
+      <div id="ageDisplay" class="age-block">--</div>
+      <div id="statusText" class="sub-text">Sellect Ur Age DD-MM-YYYY</div>
+      <div id="liveClock" style="font-size: 20px; margin-top: 10px; color: #fc00ff;"></div>
+    </div>
+  </div>
+  
+  <script>
+    let intervalId;
+
+    document.getElementById("calculateBtn").addEventListener("click", function () {
+      const dobInput = document.getElementById("dob").value;
+      if (!dobInput) return;
+
+      // ✅ CLICK KARTE HI TEXT CHANGE HOGA
+      const statusElement = document.getElementById("statusText");
+      statusElement.innerText = "ये आपकी Current Age है !! ✅";
+      statusElement.style.color = "#00dbde"; // Isse text highlight hoga
+      statusElement.style.fontWeight = "bold";
+
+      if (intervalId) clearInterval(intervalId);
+
+      const updateAge = () => {
+        const dob = new Date(dobInput);
+        const now = new Date();
+
+        let years = now.getFullYear() - dob.getFullYear();
+        let months = now.getMonth() - dob.getMonth();
+        let days = now.getDate() - dob.getDate();
+
+        if (days < 0) {
+          months -= 1;
+          days += new Date(now.getFullYear(), now.getMonth(), 0).getDate();
+        }
+        if (months < 0) {
+          years -= 1;
+          months += 12;
+        }
+
+        const diff = now - dob;
+        const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+        const minutes = Math.floor((diff / (1000 * 60)) % 60);
+        const seconds = Math.floor((diff / 1000) % 60);
+
+        // Age display formatting
+        document.getElementById("ageDisplay").innerText = `${years}Y ${months}M ${days}D`;
+        
+        // Seconds ticking live
+        document.getElementById("liveClock").innerText = 
+          `${hours.toString().padStart(2, '0')}h : ${minutes.toString().padStart(2, '0')}m : ${seconds.toString().padStart(2, '0')}s`;
+      };
+
+      updateAge();
+      intervalId = setInterval(updateAge, 1000);
+    });
+  </script>
+</body>
+</html>
