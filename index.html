@@ -87,6 +87,7 @@
       gap: 10px;
     }
 
+    /* Keep the class but hide it initially, or use it when there's an actual result */
     .age-block {
       font-size: 30px;
       font-weight: 800;
@@ -140,7 +141,8 @@
     </div>
 
     <div id="result-container">
-      <div id="ageDisplay" class="age-block">--</div>
+      <!-- We only show ageDisplay if there is a valid calculated age. Initially empty -->
+      <div id="ageDisplay" class="age-block"></div>
       
       <!-- Updated Made By text with link and animation classes -->
       <div id="statusText" class="sub-text">
@@ -192,7 +194,7 @@
       // Check if all fields are filled with a minimum valid length for year (at least 4 digits expected realistically, or let's say user typed enough)
       // Only calculate if all fields have valid numbers
       if (!d || !m || !y || d < 1 || d > 31 || m < 1 || m > 12 || y < 1900 || document.getElementById("year").value.length < 4) {
-          ageDisplay.innerText = "--";
+          ageDisplay.innerText = ""; // Make it completely blank instead of "--"
           statusElement.innerHTML = `<a href="https://www.instagram.com/herosalman1_929/" target="_blank" id="madeByLink">Made By: @HeroSalman1</a>`;
           attachAnimationListeners(); // Re-attach listeners when innerHTML changes
           return;
@@ -201,7 +203,7 @@
       const dob = new Date(y, m - 1, d);
 
       if (dob > new Date()) {
-        ageDisplay.innerText = "--";
+        ageDisplay.innerText = ""; // Make it completely blank instead of "--"
         statusElement.innerHTML = "<span style='color: #ff4b5c;'>Future Date Allow Nahi Hai!</span>";
         return;
       }
