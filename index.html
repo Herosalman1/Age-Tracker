@@ -25,6 +25,8 @@
     }
 
     .container {
+      position: relative;
+      z-index: 200;
       background: rgba(255, 255, 255, 0.05);
       backdrop-filter: blur(10px);
       border: 1px solid rgba(255, 255, 255, 0.1);
@@ -68,6 +70,16 @@
       font-size: 14px;
     }
 
+    /* Remove number spin buttons */
+    input[type=number]::-webkit-inner-spin-button, 
+    input[type=number]::-webkit-outer-spin-button { 
+      -webkit-appearance: none; 
+      margin: 0; 
+    }
+    input[type=number] {
+      -moz-appearance: textfield;
+    }
+
     button {
       background: linear-gradient(45deg, #00dbde, #fc00ff);
       border: none;
@@ -104,32 +116,92 @@
     .sub-text {
       font-size: 14px;
       color: #aaa;
-      text-transform: uppercase;
       letter-spacing: 1px;
     }
+
+    /* Made by text styling with animation and hover effect */
+    #madeByLink {
+      color: #aaa;
+      text-decoration: none;
+      transition: color 0.3s ease, transform 0.1s ease;
+      display: inline-block; /* Required for transform */
+      cursor: pointer;
+    }
+
+    #madeByLink:hover {
+      color: #fff; /* Turns white on hover */
+      text-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
+    }
+
+    /* Animation class for the 'key press' effect */
+    .pressed {
+      transform: scale(0.90);
+    }
+
   </style>
 </head>
 <body>
+
   <div class="container">
     <h2>AGE TRACKER</h2>
     
     <!-- Manual Inputs for DD, MM, YYYY -->
     <div class="manual-date-box">
-      <input type="number" id="day" placeholder="DD" min="1" max="31" inputmode="numeric">
-      <input type="number" id="month" placeholder="MM" min="1" max="12" inputmode="numeric">
-      <input type="number" id="year" placeholder="YYYY" min="1900" max="2100" inputmode="numeric">
+      <!-- Auto-focus inputs -->
+      <input type="number" id="day" placeholder="DD" min="1" max="31" inputmode="numeric" 
+             oninput="if(this.value.length >= 2) document.getElementById('month').focus();">
+      
+      <input type="number" id="month" placeholder="MM" min="1" max="12" inputmode="numeric"
+             oninput="if(this.value.length >= 2) document.getElementById('year').focus();">
+             
+      <input type="number" id="year" placeholder="YYYY" min="1900" max="2100" inputmode="numeric"
+             oninput="if(this.value.length >= 4) document.getElementById('calculateBtn').focus();">
     </div>
 
     <button id="calculateBtn">CALCULATE AGE</button>
 
     <div id="result-container">
       <div id="ageDisplay" class="age-block">--</div>
-      <div id="statusText" class="sub-text" style="text-transform: capitalize;">Made by: @HeroSalman1</div>
+      
+      <!-- Updated Made By text with link and animation classes -->
+      <div id="statusText" class="sub-text">
+          <a href="https://www.instagram.com/herosalman1_929/" target="_blank" id="madeByLink">Made By: @HeroSalman1</a>
+      </div>
+      
       <div id="liveClock" style="font-size: 20px; margin-top: 10px; color: #fc00ff;"></div>
     </div>
   </div>
 
   <script>
+    // --- "Made By" Click Animation Logic ---
+    const madeByLink = document.getElementById('madeByLink');
+
+    madeByLink.addEventListener('mousedown', () => {
+        madeByLink.classList.add('pressed');
+    });
+
+    madeByLink.addEventListener('mouseup', () => {
+        madeByLink.classList.remove('pressed');
+    });
+
+    // In case the mouse leaves the element while pressed down
+    madeByLink.addEventListener('mouseleave', () => {
+        madeByLink.classList.remove('pressed');
+    });
+
+    // --- Touch events for mobile ---
+    madeByLink.addEventListener('touchstart', () => {
+         madeByLink.classList.add('pressed');
+    });
+
+    madeByLink.addEventListener('touchend', () => {
+        setTimeout(() => {
+           madeByLink.classList.remove('pressed');
+        }, 150); // slight delay so the user sees the press on mobile
+    });
+    
+
+    // --- Age Calculator Logic ---
     let intervalId;
 
     document.getElementById("calculateBtn").addEventListener("click", function () {
@@ -140,23 +212,27 @@
       const statusElement = document.getElementById("statusText");
 
       if (!d || !m || !y || d < 1 || d > 31 || m < 1 || m > 12 || y < 1900) {
-        statusElement.innerText = "Sahi Date, Month aur Year Dalein!";
-        statusElement.style.color = "#ff4b5c";
+        statusElement.innerHTML = "<span style='color: #ff4b5c;'>Sahi Date, Month aur Year Dalein!</span>";
         return;
       }
 
-      // Create valid date object (Month is 0-indexed in JS)
       const dob = new Date(y, m - 1, d);
 
       if (dob > new Date()) {
-        statusElement.innerText = "Future Date Allow Nahi Hai!";
-        statusElement.style.color = "#ff4b5c";
+        statusElement.innerHTML = "<span style='color: #ff4b5c;'>Future Date Allow Nahi Hai!</span>";
         return;
       }
 
-      statusElement.innerText = "ये आपकी Current Age है !! ✅";
-      statusElement.style.color = "#00dbde";
-      statusElement.style.fontWeight = "bold";
+      // Restore the "Made by" link after successful calculation
+      statusElement.innerHTML = `<a href="https://www.instagram.com/herosalman1_929/" target="_blank" id="madeByLink" style="color: #00dbde; font-weight: bold;">ये आपकी Current Age है !! ✅</a>`;
+      
+      // Re-attach listeners since innerHTML replaced the element
+      const newMadeByLink = document.getElementById('madeByLink');
+      newMadeByLink.addEventListener('mousedown', () => newMadeByLink.classList.add('pressed'));
+      newMadeByLink.addEventListener('mouseup', () => newMadeByLink.classList.remove('pressed'));
+      newMadeByLink.addEventListener('mouseleave', () => newMadeByLink.classList.remove('pressed'));
+      newMadeByLink.addEventListener('touchstart', () => newMadeByLink.classList.add('pressed'));
+      newMadeByLink.addEventListener('touchend', () => setTimeout(() => newMadeByLink.classList.remove('pressed'), 150));
 
       if (intervalId) clearInterval(intervalId);
 
