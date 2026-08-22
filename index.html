@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html lang="hi">
 <head>
-  <meta charset="UTF-8"> 
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Age Calculator</title>
   <style>
     * {
@@ -11,7 +12,7 @@
     }
 
     body {
-      width: 100vw; /* Changed from 450px to 100vw for full screen web page view, but kept styling centered */
+      width: 100vw;
       min-height: 100vh;
       font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
       background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
@@ -30,7 +31,7 @@
       border-radius: 20px;
       padding: 30px;
       width: 90%;
-      max-width: 450px; /* Added max-width to keep the extension-like feel */
+      max-width: 450px;
       text-align: center;
       box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
     }
@@ -44,17 +45,27 @@
       letter-spacing: 1px;
     }
 
-    input[type="date"] {
+    .manual-date-box {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .manual-date-box input {
       background: rgba(255, 255, 255, 0.1);
       border: 1px solid #00dbde;
       border-radius: 10px;
       color: #fff;
-      font-size: 18px;
-      padding: 12px;
+      font-size: 16px;
+      padding: 12px 8px;
       width: 100%;
       outline: none;
-      margin-bottom: 20px;
-      color-scheme: dark; /* Helps date picker look good on dark backgrounds */
+      text-align: center;
+    }
+
+    .manual-date-box input::placeholder {
+      color: #bbb;
+      font-size: 14px;
     }
 
     button {
@@ -84,7 +95,7 @@
     }
 
     .age-block {
-      font-size: 32px;
+      font-size: 30px;
       font-weight: 800;
       color: #00dbde;
       text-shadow: 0 0 10px rgba(0, 219, 222, 0.5);
@@ -94,40 +105,62 @@
       font-size: 14px;
       color: #aaa;
       text-transform: uppercase;
-      letter-spacing: 2px;
+      letter-spacing: 1px;
     }
   </style>
 </head>
 <body>
   <div class="container">
     <h2>AGE TRACKER</h2>
-    <input type="date" id="dob">
+    
+    <!-- Manual Inputs for DD, MM, YYYY -->
+    <div class="manual-date-box">
+      <input type="number" id="day" placeholder="DD (01)" min="1" max="31" inputmode="numeric">
+      <input type="number" id="month" placeholder="MM (05)" min="1" max="12" inputmode="numeric">
+      <input type="number" id="year" placeholder="YYYY (2000)" min="1900" max="2100" inputmode="numeric">
+    </div>
+
     <button id="calculateBtn">CALCULATE AGE</button>
 
     <div id="result-container">
       <div id="ageDisplay" class="age-block">--</div>
-      <div id="statusText" class="sub-text">Sellect Ur Age DD-MM-YYYY</div>
+      <div id="statusText" class="sub-text">Enter Date & Tap Calculate</div>
       <div id="liveClock" style="font-size: 20px; margin-top: 10px; color: #fc00ff;"></div>
     </div>
   </div>
-  
+
   <script>
     let intervalId;
 
     document.getElementById("calculateBtn").addEventListener("click", function () {
-      const dobInput = document.getElementById("dob").value;
-      if (!dobInput) return;
+      const d = parseInt(document.getElementById("day").value);
+      const m = parseInt(document.getElementById("month").value);
+      const y = parseInt(document.getElementById("year").value);
 
-      // ✅ CLICK KARTE HI TEXT CHANGE HOGA
       const statusElement = document.getElementById("statusText");
+
+      if (!d || !m || !y || d < 1 || d > 31 || m < 1 || m > 12 || y < 1900) {
+        statusElement.innerText = "Sahi Date, Month aur Year Dalein!";
+        statusElement.style.color = "#ff4b5c";
+        return;
+      }
+
+      // Create valid date object (Month is 0-indexed in JS)
+      const dob = new Date(y, m - 1, d);
+
+      if (dob > new Date()) {
+        statusElement.innerText = "Future Date Allow Nahi Hai!";
+        statusElement.style.color = "#ff4b5c";
+        return;
+      }
+
       statusElement.innerText = "ये आपकी Current Age है !! ✅";
-      statusElement.style.color = "#00dbde"; // Isse text highlight hoga
+      statusElement.style.color = "#00dbde";
       statusElement.style.fontWeight = "bold";
 
       if (intervalId) clearInterval(intervalId);
 
       const updateAge = () => {
-        const dob = new Date(dobInput);
         const now = new Date();
 
         let years = now.getFullYear() - dob.getFullYear();
@@ -148,10 +181,7 @@
         const minutes = Math.floor((diff / (1000 * 60)) % 60);
         const seconds = Math.floor((diff / 1000) % 60);
 
-        // Age display formatting
         document.getElementById("ageDisplay").innerText = `${years}Y ${months}M ${days}D`;
-        
-        // Seconds ticking live
         document.getElementById("liveClock").innerText = 
           `${hours.toString().padStart(2, '0')}h : ${minutes.toString().padStart(2, '0')}m : ${seconds.toString().padStart(2, '0')}s`;
       };
