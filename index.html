@@ -80,25 +80,6 @@
       -moz-appearance: textfield;
     }
 
-    button {
-      background: linear-gradient(45deg, #00dbde, #fc00ff);
-      border: none;
-      border-radius: 10px;
-      color: white;
-      padding: 15px 30px;
-      font-size: 18px;
-      font-weight: bold;
-      cursor: pointer;
-      width: 100%;
-      transition: transform 0.2s, box-shadow 0.2s;
-      text-transform: uppercase;
-    }
-
-    button:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 5px 15px rgba(0, 219, 222, 0.4);
-    }
-
     #result-container {
       margin-top: 25px;
       display: flex;
@@ -149,16 +130,14 @@
     <div class="manual-date-box">
       <!-- Auto-focus inputs -->
       <input type="number" id="day" placeholder="DD" min="1" max="31" inputmode="numeric" 
-             oninput="if(this.value.length >= 2) document.getElementById('month').focus();">
+             oninput="if(this.value.length >= 2) document.getElementById('month').focus(); calculateAge();">
       
       <input type="number" id="month" placeholder="MM" min="1" max="12" inputmode="numeric"
-             oninput="if(this.value.length >= 2) document.getElementById('year').focus();">
+             oninput="if(this.value.length >= 2) document.getElementById('year').focus(); calculateAge();">
              
       <input type="number" id="year" placeholder="YYYY" min="1900" max="2100" inputmode="numeric"
-             oninput="if(this.value.length >= 4) document.getElementById('calculateBtn').focus();">
+             oninput="calculateAge();">
     </div>
-
-    <button id="calculateBtn">CALCULATE AGE</button>
 
     <div id="result-container">
       <div id="ageDisplay" class="age-block">--</div>
@@ -167,8 +146,6 @@
       <div id="statusText" class="sub-text">
           <a href="https://www.instagram.com/herosalman1_929/" target="_blank" id="madeByLink">Made By: @HeroSalman1</a>
       </div>
-      
-      <div id="liveClock" style="font-size: 20px; margin-top: 10px; color: #fc00ff;"></div>
     </div>
   </div>
 
@@ -204,67 +181,66 @@
     // --- Age Calculator Logic ---
     let intervalId;
 
-    document.getElementById("calculateBtn").addEventListener("click", function () {
+    function calculateAge() {
       const d = parseInt(document.getElementById("day").value);
       const m = parseInt(document.getElementById("month").value);
       const y = parseInt(document.getElementById("year").value);
 
       const statusElement = document.getElementById("statusText");
+      const ageDisplay = document.getElementById("ageDisplay");
 
-      if (!d || !m || !y || d < 1 || d > 31 || m < 1 || m > 12 || y < 1900) {
-        statusElement.innerHTML = "<span style='color: #ff4b5c;'>Sahi Date, Month aur Year Dalein!</span>";
-        return;
+      // Check if all fields are filled with a minimum valid length for year (at least 4 digits expected realistically, or let's say user typed enough)
+      // Only calculate if all fields have valid numbers
+      if (!d || !m || !y || d < 1 || d > 31 || m < 1 || m > 12 || y < 1900 || document.getElementById("year").value.length < 4) {
+          ageDisplay.innerText = "--";
+          statusElement.innerHTML = `<a href="https://www.instagram.com/herosalman1_929/" target="_blank" id="madeByLink">Made By: @HeroSalman1</a>`;
+          attachAnimationListeners(); // Re-attach listeners when innerHTML changes
+          return;
       }
 
       const dob = new Date(y, m - 1, d);
 
       if (dob > new Date()) {
+        ageDisplay.innerText = "--";
         statusElement.innerHTML = "<span style='color: #ff4b5c;'>Future Date Allow Nahi Hai!</span>";
         return;
       }
 
       // Restore the "Made by" link after successful calculation
       statusElement.innerHTML = `<a href="https://www.instagram.com/herosalman1_929/" target="_blank" id="madeByLink" style="color: #00dbde; font-weight: bold;">ये आपकी Current Age है !! ✅</a>`;
-      
-      // Re-attach listeners since innerHTML replaced the element
-      const newMadeByLink = document.getElementById('madeByLink');
-      newMadeByLink.addEventListener('mousedown', () => newMadeByLink.classList.add('pressed'));
-      newMadeByLink.addEventListener('mouseup', () => newMadeByLink.classList.remove('pressed'));
-      newMadeByLink.addEventListener('mouseleave', () => newMadeByLink.classList.remove('pressed'));
-      newMadeByLink.addEventListener('touchstart', () => newMadeByLink.classList.add('pressed'));
-      newMadeByLink.addEventListener('touchend', () => setTimeout(() => newMadeByLink.classList.remove('pressed'), 150));
+      attachAnimationListeners();
 
       if (intervalId) clearInterval(intervalId);
 
-      const updateAge = () => {
-        const now = new Date();
+      const now = new Date();
 
-        let years = now.getFullYear() - dob.getFullYear();
-        let months = now.getMonth() - dob.getMonth();
-        let days = now.getDate() - dob.getDate();
+      let years = now.getFullYear() - dob.getFullYear();
+      let months = now.getMonth() - dob.getMonth();
+      let days = now.getDate() - dob.getDate();
 
-        if (days < 0) {
-          months -= 1;
-          days += new Date(now.getFullYear(), now.getMonth(), 0).getDate();
+      if (days < 0) {
+        months -= 1;
+        days += new Date(now.getFullYear(), now.getMonth(), 0).getDate();
+      }
+      if (months < 0) {
+        years -= 1;
+        months += 12;
+      }
+
+      ageDisplay.innerText = `${years}Y ${months}M ${days}D`;
+    }
+    
+    // Helper function to re-attach animation listeners when innerHTML is replaced
+    function attachAnimationListeners() {
+        const newMadeByLink = document.getElementById('madeByLink');
+        if(newMadeByLink) {
+            newMadeByLink.addEventListener('mousedown', () => newMadeByLink.classList.add('pressed'));
+            newMadeByLink.addEventListener('mouseup', () => newMadeByLink.classList.remove('pressed'));
+            newMadeByLink.addEventListener('mouseleave', () => newMadeByLink.classList.remove('pressed'));
+            newMadeByLink.addEventListener('touchstart', () => newMadeByLink.classList.add('pressed'));
+            newMadeByLink.addEventListener('touchend', () => setTimeout(() => newMadeByLink.classList.remove('pressed'), 150));
         }
-        if (months < 0) {
-          years -= 1;
-          months += 12;
-        }
-
-        const diff = now - dob;
-        const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
-        const minutes = Math.floor((diff / (1000 * 60)) % 60);
-        const seconds = Math.floor((diff / 1000) % 60);
-
-        document.getElementById("ageDisplay").innerText = `${years}Y ${months}M ${days}D`;
-        document.getElementById("liveClock").innerText = 
-          `${hours.toString().padStart(2, '0')}h : ${minutes.toString().padStart(2, '0')}m : ${seconds.toString().padStart(2, '0')}s`;
-      };
-
-      updateAge();
-      intervalId = setInterval(updateAge, 1000);
-    });
+    }
   </script>
 </body>
 </html>
