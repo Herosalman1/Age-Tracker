@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VIP Live TV Dashboard</title>
+    <!-- YouTube IFrame API -->
+    <script src="https://www.youtube.com/iframe_api"></script>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -217,6 +219,15 @@
             display: block;
         }
 
+        /* YouTube Shield - Blocks Mouse Hover Completely */
+        #ytWrapper {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            display: none;
+            pointer-events: none; /* KEY FIX: YouTube won't detect hover */
+        }
+
         .player-controls-bar {
             display: flex;
             align-items: center;
@@ -324,7 +335,7 @@
                 
                 <div id="addChannelForm">
                     <input type="text" id="chName" placeholder="Channel Name (e.g. StarPlus HD)">
-                    <input type="url" id="chUrl" placeholder="M3U8 / YouTube Stream URL">
+                    <input type="url" id="chUrl" placeholder="M3U8 / YouTube Stream / Playlist URL">
                     
                     <div class="cat-group">
                         <select id="chCategory"></select>
@@ -360,15 +371,12 @@
             
             <div class="now-playing" id="nowPlayingText">Ready to stream... <span></span></div>
 
-            <div class="video-container">
+            <div class="video-container" id="videoContainer">
                 <video id="tvPlayer" controls autoplay></video>
-                <!-- Standard YouTube Iframe for Web Hosting -->
-                <iframe id="ytPlayer" 
-                        frameborder="0" 
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
-                        allowfullscreen 
-                        style="display:none; width:100%; height:100%; border:none;">
-                </iframe>
+                <!-- Shield Wrapper to prevent hover interactions -->
+                <div id="ytWrapper">
+                    <div id="ytPlayer"></div>
+                </div>
             </div>
             
             <div class="player-controls-bar">
@@ -383,6 +391,10 @@
                     
                     <button class="ctrl-btn" onclick="playNextChannel()">
                         <svg viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg> Next
+                    </button>
+                    <!-- Custom Fullscreen Button Added -->
+                    <button class="ctrl-btn" onclick="toggleFullScreen()" title="Fullscreen">
+                        <svg viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg> 
                     </button>
                 </div>
             </div>
@@ -405,7 +417,7 @@
 
     <script>
         const video = document.getElementById('tvPlayer');
-        const ytPlayer = document.getElementById('ytPlayer'); 
+        const ytWrapper = document.getElementById('ytWrapper'); 
         const nowPlayingText = document.getElementById('nowPlayingText');
         const channelListEl = document.getElementById('channelList');
         const categorySelectEl = document.getElementById('chCategory');
@@ -436,6 +448,23 @@
         const defaultCategories = ["NEWS", "MOVIES", "KIDS & CARTOON", "MUSIC", "SPORTS", "SERIAL EPISODE", "OTHER"];
         let savedCategories = [];
         let savedChannels = [];
+
+        // YouTube API Variables
+        let ytPlayerInstance = null;
+        let isYtApiReady = false;
+        let isYouTubeMode = false;
+
+        function onYouTubeIframeAPIReady() {
+            isYtApiReady = true;
+        }
+
+        function onPlayerStateChange(event) {
+            if (event.data === YT.PlayerState.PLAYING) {
+                setPauseIcon();
+            } else if (event.data === YT.PlayerState.PAUSED || event.data === YT.PlayerState.ENDED) {
+                setPlayIcon();
+            }
+        }
 
         const DB_NAME = "HERO_LIVE_01";
         const STORE_NAME = "tvData";
@@ -848,9 +877,14 @@
             playStream(ch.url, ch.name);
         }
 
-        function getYouTubeID(url) {
-            let match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|live\/|shorts\/))([\w-]{11})/);
-            return (match && match[1]) ? match[1] : null;
+        function getYouTubeInfo(url) {
+            let videoId = null;
+            let playlistId = null;
+            let vMatch = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|live\/|shorts\/))([\w-]{11})/);
+            if (vMatch && vMatch[1]) videoId = vMatch[1];
+            let pMatch = url.match(/[?&]list=([\w-]+)/);
+            if (pMatch && pMatch[1]) playlistId = pMatch[1];
+            return { videoId, playlistId };
         }
 
         function playStream(url, name) {
@@ -861,20 +895,62 @@
                 hlsInstance = null;
             }
 
-            const ytId = getYouTubeID(url);
+            const ytInfo = getYouTubeInfo(url);
             
-            if (ytId) {
+            if (ytInfo.videoId || ytInfo.playlistId) {
+                isYouTubeMode = true;
                 video.style.display = 'none';
                 video.pause();
-                ytPlayer.style.display = 'block';
-                // Direct YouTube embed formatted strictly for live web servers
-                ytPlayer.src = `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0`;
+                ytWrapper.style.display = 'block';
+                
+                let playerVars = {
+                    'autoplay': 1,
+                    'controls': 0, // Hides bottom controls
+                    'modestbranding': 1,
+                    'rel': 0, // Prevent outer channel suggestions
+                    'disablekb': 1,
+                    'iv_load_policy': 3
+                };
+                
+                if (ytInfo.playlistId) {
+                    playerVars.listType = 'playlist';
+                    playerVars.list = ytInfo.playlistId;
+                }
+
+                if (!ytPlayerInstance) {
+                    if (isYtApiReady) {
+                        ytPlayerInstance = new YT.Player('ytPlayer', {
+                            width: '100%',
+                            height: '100%',
+                            videoId: ytInfo.videoId || '',
+                            playerVars: playerVars,
+                            events: {
+                                'onStateChange': onPlayerStateChange
+                            }
+                        });
+                    } else {
+                        // Wait for YT API to load if clicked too fast
+                        setTimeout(() => playStream(url, name), 500);
+                        return;
+                    }
+                } else {
+                    if (ytInfo.playlistId) {
+                        ytPlayerInstance.loadPlaylist({list: ytInfo.playlistId});
+                    } else {
+                        ytPlayerInstance.loadVideoById(ytInfo.videoId);
+                    }
+                }
                 setPauseIcon();
                 return;
             }
 
-            ytPlayer.style.display = 'none';
-            ytPlayer.src = '';
+            // Normal M3U8 or MP4
+            isYouTubeMode = false;
+            ytWrapper.style.display = 'none';
+            if (ytPlayerInstance && typeof ytPlayerInstance.pauseVideo === 'function') {
+                ytPlayerInstance.pauseVideo();
+            }
+            
             video.style.display = 'block';
 
             if (Hls.isSupported() && url.includes('.m3u8')) {
@@ -915,7 +991,15 @@
                 return;
             }
 
-            if (ytPlayer.style.display === 'block') {
+            if (isYouTubeMode && ytPlayerInstance) {
+                let state = ytPlayerInstance.getPlayerState();
+                if (state === YT.PlayerState.PLAYING) {
+                    ytPlayerInstance.pauseVideo();
+                    setPlayIcon();
+                } else {
+                    ytPlayerInstance.playVideo();
+                    setPauseIcon();
+                }
                 return;
             }
 
@@ -940,6 +1024,23 @@
             let prevIndex = currentPlayingIndex - 1;
             if (prevIndex < 0) prevIndex = savedChannels.length - 1; 
             playChannelByIndex(prevIndex);
+        }
+        
+        function toggleFullScreen() {
+            const container = document.getElementById('videoContainer');
+            if (!document.fullscreenElement) {
+                if (container.requestFullscreen) {
+                    container.requestFullscreen();
+                } else if (container.webkitRequestFullscreen) { /* Safari */
+                    container.webkitRequestFullscreen();
+                } else if (container.msRequestFullscreen) { /* IE11 */
+                    container.msRequestFullscreen();
+                }
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+            }
         }
 
         async function backupData() {
@@ -1026,18 +1127,19 @@
         });
 
         document.addEventListener('keydown', function(e) {
-            if (ytPlayer.style.display === 'block') return; 
-            if (!video || (!video.src && !video.currentSrc)) return;
-
             switch(e.key) {
                 case 'ArrowRight':
-                    if (video.duration) {
+                    if (isYouTubeMode && ytPlayerInstance) {
+                        ytPlayerInstance.seekTo(ytPlayerInstance.getCurrentTime() + 10, true);
+                    } else if (video && video.duration) {
                         video.currentTime = Math.min(video.duration, video.currentTime + 10);
                     }
                     e.preventDefault();
                     break;
                 case 'ArrowLeft':
-                    if (video.duration) {
+                    if (isYouTubeMode && ytPlayerInstance) {
+                        ytPlayerInstance.seekTo(Math.max(0, ytPlayerInstance.getCurrentTime() - 10), true);
+                    } else if (video && video.duration) {
                         video.currentTime = Math.max(0, video.currentTime - 10);
                     }
                     e.preventDefault();
