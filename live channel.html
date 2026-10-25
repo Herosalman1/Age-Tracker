@@ -361,7 +361,8 @@
             <div class="now-playing" id="nowPlayingText">Ready to stream... <span></span></div>
 
             <div class="video-container">
-                <video id="tvPlayer" controls autoplay></video>
+                <!-- IMPORTANT: crossorigin and playsinline added for external links compatibility -->
+                <video id="tvPlayer" controls autoplay playsinline crossorigin="anonymous"></video>
             </div>
             
             <div class="player-controls-bar">
@@ -840,44 +841,45 @@
             playStream(ch.url, ch.name);
         }
 
-        // Updated playStream with CORS Proxy bypass trick
+        // Updated function to handle HLS better with configuration and Error Recovery
         function playStream(url, name) {
             nowPlayingText.innerHTML = `Now Playing: <span>${name}</span>`;
 
             if (hlsInstance) {
                 hlsInstance.destroy();
-                hlsInstance = null;
             }
 
-            if (Hls.isSupported() && url.includes('.m3u8')) {
+            if (Hls.isSupported()) {
+                // Initializing HLS.js with proper config for streams
                 hlsInstance = new Hls({
-                    xhrSetup: function (xhr, targetUrl) {
-                        // Route requests through corsproxy to bypass CORS restrictions
-                        const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(targetUrl);
-                        xhr.open('GET', proxyUrl, true);
-                    }
+                    maxMaxBufferLength: 100,
+                    startLevel: -1,
+                    enableWorker: true,
+                    lowLatencyMode: true
                 });
-
+                
                 hlsInstance.loadSource(url);
                 hlsInstance.attachMedia(video);
-
+                
                 hlsInstance.on(Hls.Events.MANIFEST_PARSED, function () {
-                    video.play().catch(e => {
-                        console.log("Auto-play blocked by browser:", e);
-                    });
+                    video.play().catch(e => console.log("Auto-play blocked."));
                     setPauseIcon();
                 });
 
+                // Added Auto Recovery Event Listener for handling stream fetch errors
                 hlsInstance.on(Hls.Events.ERROR, function (event, data) {
                     if (data.fatal) {
-                        switch (data.type) {
+                        switch(data.type) {
                             case Hls.ErrorTypes.NETWORK_ERROR:
+                                console.error("Fatal network error encountered, trying to recover...");
                                 hlsInstance.startLoad();
                                 break;
                             case Hls.ErrorTypes.MEDIA_ERROR:
+                                console.error("Fatal media error encountered, trying to recover...");
                                 hlsInstance.recoverMediaError();
                                 break;
                             default:
+                                console.error("Unrecoverable error, stopping playback.");
                                 hlsInstance.destroy();
                                 break;
                         }
@@ -885,16 +887,15 @@
                 });
 
             } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                // Fallback for Safari natively supporting HLS
                 video.src = url;
                 video.addEventListener('loadedmetadata', function () {
-                    video.play().catch(e => console.log("Auto-play blocked"));
+                    video.play().catch(e => console.log("Direct play blocked."));
                     setPauseIcon();
                 });
             } else {
                 video.src = url;
-                video.play().catch(e => {
-                    alert("Playback failed or unsupported format.");
-                });
+                video.play().catch(e => console.log("Direct play blocked or unsupported format."));
                 setPauseIcon();
             }
         }
